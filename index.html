@@ -20,6 +20,7 @@ overflow-x: hidden;
 position: relative;
 font-size: clamp(10px, 2.5vw, 14px);
 }
+
 /* 小画面スケーリング */
 @media (max-height: 600px) {
 .title-logo { margin: 8px 0 14px; }
@@ -28,7 +29,7 @@ font-size: clamp(10px, 2.5vw, 14px);
 .hi-score-display { margin-bottom: 14px; }
 .countdown-num { font-size: 40px; }
 .cell { font-size: 13px; }
-.score-bar { padding: 6px 0 6px; }
+.score-bar { padding: 6px 0; }
 .score-value { font-size: 18px; }
 .result-verdict { font-size: 32px; margin: 6px 0 12px; }
 }
@@ -238,12 +239,11 @@ animation: glow 1.2s ease-in-out infinite alternate;
 from { box-shadow: 0 0 8px rgba(255,225,0,0.3), inset 0 0 6px rgba(255,225,0,0.1); }
 to { box-shadow: 0 0 20px rgba(255,225,0,0.6), inset 0 0 14px rgba(255,225,0,0.2); }
 }
-.cell.hidden { color: transparent; border-color: rgba(0,255,224,0.08); }
 
 /* ── Answer Phase ── */
 #screenAnswer {
 justify-content: center;
-gap: 16px;
+gap: 20px;
 }
 .answer-prompt {
 text-align: center;
@@ -252,7 +252,6 @@ letter-spacing: 2px;
 color: rgba(0,255,224,0.5);
 }
 .answer-prompt strong { color: #ff00c8; font-size: 14px; }
-.input-wrap { width: 100%; }
 .num-input {
 display: block;
 width: 100%;
@@ -321,7 +320,7 @@ color: rgba(0,255,224,0.5);
 <body>
 <div class="wrapper">
 
-<!-- ── Score Bar (hidden on title) ── -->
+<!-- ── Score Bar ── -->
 
 <div class="score-bar" id="scoreBar" style="display:none">
 <div class="score-item">
@@ -355,7 +354,7 @@ color: rgba(0,255,224,0.5);
 <div class="hi-score-display">
 BEST ROUND<span id="titleBest">—</span>
 </div>
-<button class="btn magenta" id="btnInit" onclick="startGame()">INITIALIZE</button>
+<button class="btn magenta" onclick="startGame()">INITIALIZE</button>
 </div>
 
 <!-- ── Memory Phase ── -->
@@ -373,10 +372,8 @@ BEST ROUND<span id="titleBest">—</span>
 <div class="screen" id="screenAnswer">
 <div class="phase-label">ANSWER PHASE — ENTER THE SUM</div>
 <div class="answer-prompt">光っていた数字の <strong>合計</strong> を入力</div>
-<div class="input-wrap">
 <input class="num-input" id="numInput" type="number" inputmode="numeric"
 pattern="[0-9]*" placeholder="0" autocomplete="off" autocorrect="off">
-</div>
 <button class="btn" onclick="submitAnswer()">SUBMIT</button>
 </div>
 
@@ -389,12 +386,11 @@ pattern="[0-9]*" placeholder="0" autocomplete="off" autocorrect="off">
 <button class="btn" id="btnNext" onclick="nextAction()"></button>
 </div>
 
-</div><!-- /wrapper -->
+</div>
 
 <script>
 'use strict';
 
-// ── State ──
 var audioCtx = null;
 var round = 1;
 var litIndices = [];
@@ -404,7 +400,6 @@ var bestRound = 0;
 var cdTimer = null;
 var isCorrect = false;
 
-// ── LocalStorage ──
 function loadBest() {
 var v = parseInt(localStorage.getItem('mp_best') || '0', 10);
 bestRound = isNaN(v) ? 0 : v;
@@ -419,14 +414,11 @@ document.getElementById('titleBest').textContent = txt;
 document.getElementById('sbBest').textContent = bestRound > 0 ? String(bestRound) : '-';
 }
 
-// ── Audio ──
 function initAudio() {
 if (!audioCtx) {
 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 }
-if (audioCtx.state === 'suspended') {
-audioCtx.resume();
-}
+if (audioCtx.state === 'suspended') audioCtx.resume();
 }
 function playTone(freq, type, dur, vol) {
 if (!audioCtx) return;
@@ -448,95 +440,67 @@ function playEnd() { playTone(1200, 'square', 0.4, 0.25); }
 function playWrong() { playTone(200, 'sawtooth', 0.5, 0.2); }
 function playCorrect() {
 var notes = [523, 659, 784];
-var delay = 0;
 for (var i = 0; i < notes.length; i++) {
 (function(f, d) {
 setTimeout(function() { playTone(f, 'sine', 0.25, 0.35); }, d);
-})(notes[i], delay);
-delay += 120;
+})(notes[i], i * 120);
 }
 }
 
-// ── Screen helpers ──
 function showScreen(id) {
 var screens = document.querySelectorAll('.screen');
-for (var i = 0; i < screens.length; i++) {
-screens[i].classList.remove('active');
-}
+for (var i = 0; i < screens.length; i++) screens[i].classList.remove('active');
 document.getElementById(id).classList.add('active');
-var showBar = (id !== 'screenTitle');
-document.getElementById('scoreBar').style.display = showBar ? 'flex' : 'none';
+document.getElementById('scoreBar').style.display = (id !== 'screenTitle') ? 'flex' : 'none';
 }
-
 function updateScoreBar() {
 document.getElementById('sbRound').textContent = String(round);
 document.getElementById('sbTarget').textContent = String(round + 1);
 document.getElementById('sbBest').textContent = bestRound > 0 ? String(bestRound) : '-';
 }
 
-// ── Grid builder ──
 function shuffle(arr) {
 for (var i = arr.length - 1; i > 0; i--) {
 var j = Math.floor(Math.random() * (i + 1));
 var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
 }
 }
-function buildGrid(containerId, showLit) {
+function buildGrid(containerId) {
 var container = document.getElementById(containerId);
 container.innerHTML = '';
 for (var i = 0; i < 20; i++) {
 var cell = document.createElement('div');
 cell.className = 'cell';
-if (showLit) {
 cell.textContent = String(allNums[i]);
-if (litIndices.indexOf(i) !== -1) {
-cell.classList.add('lit');
-}
-} else {
-cell.classList.add('hidden');
-}
+if (litIndices.indexOf(i) !== -1) cell.classList.add('lit');
 container.appendChild(cell);
 }
 }
 
-// ── Game flow ──
 function startGame() {
 initAudio();
 round = 1;
 beginRound();
 }
-
 function beginRound() {
 updateScoreBar();
-
-// Build number set
 allNums = [];
 for (var n = 1; n <= 20; n++) allNums.push(n);
 shuffle(allNums);
-
-// Pick lit indices
-var numLit = round + 1;
 var indices = [];
 for (var k = 0; k < 20; k++) indices.push(k);
 shuffle(indices);
-litIndices = indices.slice(0, numLit);
-
-// Compute sum
+litIndices = indices.slice(0, round + 1);
 correctSum = 0;
-for (var j = 0; j < litIndices.length; j++) {
-correctSum += allNums[litIndices[j]];
-}
-
+for (var j = 0; j < litIndices.length; j++) correctSum += allNums[litIndices[j]];
 showScreen('screenMemory');
-buildGrid('memGrid', true);
+buildGrid('memGrid');
 startCountdown();
 }
-
 function startCountdown() {
 var remaining = 3;
 document.getElementById('cdNum').textContent = String(remaining);
 playTick();
-
 cdTimer = setInterval(function() {
 remaining--;
 if (remaining > 0) {
@@ -550,97 +514,60 @@ setTimeout(showAnswerPhase, 300);
 }
 }, 1000);
 }
-
 function showAnswerPhase() {
 showScreen('screenAnswer');
-buildGrid('ansGrid', false);
 var inp = document.getElementById('numInput');
 inp.value = '';
-// タップでフォーカス（iOS対応）
 setTimeout(function() { inp.focus(); }, 150);
 }
-
 function submitAnswer() {
 var inp = document.getElementById('numInput');
 var val = parseInt(inp.value, 10);
 if (isNaN(val)) { inp.focus(); return; }
-
 isCorrect = (val === correctSum);
-
 if (isCorrect) {
 playCorrect();
 } else {
 playWrong();
-if (round > bestRound) {
-bestRound = round;
-saveBest();
+if (round > bestRound) { bestRound = round; saveBest(); }
 }
-}
-
 showResultScreen(val, isCorrect);
 }
-
 function showResultScreen(userVal, correct) {
 showScreen('screenResult');
 updateBestDisplay();
-
 var verdict = document.getElementById('verdict');
 verdict.textContent = correct ? 'CORRECT' : 'FAILED';
 verdict.className = 'result-verdict ' + (correct ? 'correct' : 'wrong');
-
-// Build lit numbers list
 var litNums = [];
-for (var i = 0; i < litIndices.length; i++) {
-litNums.push(allNums[litIndices[i]]);
-}
+for (var i = 0; i < litIndices.length; i++) litNums.push(allNums[litIndices[i]]);
 litNums.sort(function(a,b){ return a-b; });
-
-var info = document.getElementById('resultInfo');
 var html = '';
 html += '<div class="row"><span class="lbl">ANSWER</span><span class="val">' + correctSum + '</span></div>';
-if (!correct) {
-html += '<div class="row"><span class="lbl">YOUR INPUT</span><span class="val red">' + userVal + '</span></div>';
-}
+if (!correct) html += '<div class="row"><span class="lbl">YOUR INPUT</span><span class="val red">' + userVal + '</span></div>';
 html += '<div class="row"><span class="lbl">LIT NUMBERS</span></div>';
 html += '<div class="lit-nums">[ ' + litNums.join(' + ') + ' ]</div>';
-info.innerHTML = html;
-
+document.getElementById('resultInfo').innerHTML = html;
 var reachedEl = document.getElementById('reachedRound');
 if (!correct) {
 reachedEl.innerHTML = 'REACHED ROUND<span>' + round + '</span>';
-if (bestRound > 0) {
-reachedEl.innerHTML += '<span style="font-size:12px;color:rgba(0,255,224,0.4);margin-top:4px;">BEST: ' + bestRound + '</span>';
-}
+if (bestRound > 0) reachedEl.innerHTML += '<span style="font-size:12px;color:rgba(0,255,224,0.4);margin-top:4px;">BEST: ' + bestRound + '</span>';
 } else {
 reachedEl.innerHTML = '';
 }
-
 var btn = document.getElementById('btnNext');
-if (correct) {
-btn.textContent = 'NEXT →';
-btn.className = 'btn green';
-} else {
-btn.textContent = 'RETRY';
-btn.className = 'btn magenta';
+btn.textContent = correct ? 'NEXT →' : 'RETRY';
+btn.className = correct ? 'btn green' : 'btn magenta';
 }
-}
-
 function nextAction() {
-if (isCorrect) {
-round++;
-beginRound();
-} else {
-showScreen('screenTitle');
-updateBestDisplay();
-}
+if (isCorrect) { round++; beginRound(); }
+else { showScreen('screenTitle'); updateBestDisplay(); }
 }
 
-// ── Enter key support ──
 document.getElementById('numInput').addEventListener('keydown', function(e) {
 if (e.key === 'Enter') submitAnswer();
 });
 
-// ── Init ──
 loadBest();
 </script>
 
