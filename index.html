@@ -2,197 +2,261 @@
 
 <html lang="ja">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <title>記憶×暗算チャレンジ</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:#050a18;font-family:'SF Mono','Fira Code','Consolas',monospace;overflow-x:hidden;color:#e0f0ff}
-input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{
+background:#050a18;color:#e0f0ff;
+font-family:'SF Mono','Fira Code',Consolas,monospace;
+min-height:100vh;overflow-x:hidden;
+}
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 input[type=number]{-moz-appearance:textfield}
-@keyframes gridPulse{0%,100%{box-shadow:0 0 30px rgba(0,255,255,.05)}50%{box-shadow:0 0 50px rgba(0,255,255,.12)}}
-@keyframes hlGlow{0%,100%{box-shadow:0 0 12px rgba(0,255,200,.6),inset 0 0 12px rgba(0,255,200,.15)}50%{box-shadow:0 0 24px rgba(0,255,200,.9),inset 0 0 20px rgba(0,255,200,.25)}}
-@keyframes scanline{0%{transform:translateY(-100%)}100%{transform:translateY(100vh)}}
-@keyframes fadeSlideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-@keyframes counterPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
-#root{min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#0a1628 0%,#050a18 70%);position:relative;overflow:hidden}
-.scan-wrap{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:0}
-.scan-line{position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(0,255,224,.25),transparent);animation:scanline 4s linear infinite}
-.scan-grid{position:absolute;inset:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,224,.015) 2px,rgba(0,255,224,.015) 4px)}
-.page{padding:16px;position:relative;z-index:1}
-.center-page{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:16px}
-.container{max-width:360px;margin:0 auto}
-.score-bar{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;margin-bottom:12px;background:rgba(0,255,224,.05);border:1px solid rgba(0,255,224,.2);border-radius:8px}
-.score-label{font-size:11px;color:#5a7a9a;letter-spacing:1px}
-.score-val{font-weight:800;font-size:18px}
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-width:320px;margin:0 auto;animation:gridPulse 3s ease infinite}
-.cell{border-radius:8px;display:flex;align-items:center;justify-content:center;height:52px;font-size:20px;font-weight:800;transition:all .3s;background:rgba(10,25,50,.85);border:1px solid rgba(0,255,224,.08);color:#e0f0ff}
-.cell-hl{background:linear-gradient(135deg,rgba(0,255,200,.25),rgba(0,255,224,.1));border:1px solid #00ffe0;color:#00ffe0;animation:hlGlow 1.5s ease infinite;text-shadow:0 0 12px #00ffe0}
-.cell-hidden{color:transparent}
-.btn{background:transparent;border:2px solid #00ffe0;border-radius:8px;color:#00ffe0;font-weight:700;cursor:pointer;letter-spacing:3px;font-family:inherit;text-shadow:0 0 8px #00ffe0;box-shadow:0 0 16px rgba(0,255,224,.15);transition:all .2s}
-.btn:active{background:rgba(0,255,224,.15)}
-.btn-green{border-color:#00ff88;color:#00ff88;text-shadow:0 0 8px #00ff88;box-shadow:0 0 16px rgba(0,255,136,.2)}
-.btn-green:active{background:rgba(0,255,136,.15)}
-.input-ans{width:100%;background:rgba(0,255,224,.05);border:2px solid rgba(0,255,224,.25);border-radius:8px;padding:14px 16px;font-size:28px;font-weight:800;color:#00ffe0;outline:none;text-align:center;font-family:inherit;text-shadow:0 0 10px rgba(0,255,224,.3);margin-bottom:10px}
-.input-ans:focus{border-color:#00ffe0}
+
+.wrap{min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#0a1628,#050a18 70%);position:relative;overflow:hidden}
+.scan{position:fixed;inset:0;pointer-events:none;z-index:0}
+.scan::before{content:’’;position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(0,255,224,.25),transparent);animation:sc 4s linear infinite}
+.scan::after{content:’’;position:absolute;inset:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,224,.015) 2px,rgba(0,255,224,.015) 4px)}
+.main{position:relative;z-index:1;padding:16px}
+.main–center{display:flex;align-items:center;justify-content:center;min-height:100vh}
+.box{max-width:360px;margin:0 auto;width:100%}
+
+.bar{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;margin-bottom:12px;background:rgba(0,255,224,.05);border:1px solid rgba(0,255,224,.2);border-radius:8px}
+.bar span{font-size:11px;color:#5a7a9a;letter-spacing:1px}
+.bv{font-weight:800;font-size:18px}
+
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-width:320px;margin:0 auto;animation:gp 3s ease infinite}
+.c{border-radius:8px;display:flex;align-items:center;justify-content:center;height:52px;font-size:20px;font-weight:800;background:rgba(10,25,50,.85);border:1px solid rgba(0,255,224,.08);color:#e0f0ff}
+.c.hl{background:linear-gradient(135deg,rgba(0,255,200,.25),rgba(0,255,224,.1));border-color:#00ffe0;color:#00ffe0;animation:hg 1.5s ease infinite;text-shadow:0 0 12px #00ffe0}
+.c.hd{color:transparent}
+
+.btn{display:inline-block;background:0 0;border:2px solid #00ffe0;border-radius:8px;color:#00ffe0;font-weight:700;font-family:inherit;cursor:pointer;letter-spacing:3px;text-shadow:0 0 8px #00ffe0;box-shadow:0 0 16px rgba(0,255,224,.15);-webkit-tap-highlight-color:transparent}
+.btn:active{background:rgba(0,255,224,.12)}
+.btn.gr{border-color:#00ff88;color:#00ff88;text-shadow:0 0 8px #00ff88;box-shadow:0 0 16px rgba(0,255,136,.2)}
+.btn.gr:active{background:rgba(0,255,136,.12)}
+
+.inp{width:100%;background:rgba(0,255,224,.05);border:2px solid rgba(0,255,224,.25);border-radius:8px;padding:14px 16px;font-size:28px;font-weight:800;color:#00ffe0;outline:0;text-align:center;font-family:inherit;text-shadow:0 0 10px rgba(0,255,224,.3);margin-bottom:10px}
+.inp:focus{border-color:#00ffe0}
+
 .tag{background:rgba(0,255,224,.15);color:#00ffe0;font-weight:700;border-radius:6px;padding:4px 10px;font-size:14px;border:1px solid rgba(0,255,224,.2);display:inline-block;margin:3px}
+.tc{text-align:center}
+.dim{color:#5a7a9a}
+.fi{animation:fi .5s ease}
+
+@keyframes sc{0%{transform:translateY(-100%)}100%{transform:translateY(100vh)}}
+@keyframes gp{0%,100%{box-shadow:0 0 30px rgba(0,255,255,.05)}50%{box-shadow:0 0 50px rgba(0,255,255,.12)}}
+@keyframes hg{0%,100%{box-shadow:0 0 12px rgba(0,255,200,.6),inset 0 0 12px rgba(0,255,200,.15)}50%{box-shadow:0 0 24px rgba(0,255,200,.9),inset 0 0 20px rgba(0,255,200,.25)}}
+@keyframes fi{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes cp{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
 </style>
+
 </head>
 <body>
-<div id="root">
-<div class="scan-wrap"><div class="scan-line"></div><div class="scan-grid"></div></div>
-<div id="app"></div>
+<div class="wrap">
+<div class="scan"></div>
+<div id="app" class="main"></div>
 </div>
 <script>
 (function(){
-var state={phase:"title",round:1,grid:[],hl:[],ans:"",correct:0,timeLeft:3,result:null,best:0,high:0};
-var timerT=null,timerC=null,lastTick=3;
-var audioCtx=null;
-function getCtx(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx;}
-function playTick(){try{var c=getCtx(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type="sine";o.frequency.value=880;g.gain.setValueAtTime(.3,c.currentTime);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+.15);o.start(c.currentTime);o.stop(c.currentTime+.15);}catch(e){}}
-function playFinal(){try{var c=getCtx(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type="square";o.frequency.value=1200;g.gain.setValueAtTime(.25,c.currentTime);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+.4);o.start(c.currentTime);o.stop(c.currentTime+.4);}catch(e){}}
-function playCorrect(){try{var c=getCtx();[523,659,784].forEach(function(f,i){var o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type="sine";o.frequency.value=f;g.gain.setValueAtTime(.2,c.currentTime+i*.12);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+i*.12+.2);o.start(c.currentTime+i*.12);o.stop(c.currentTime+i*.12+.2);});}catch(e){}}
-function playWrong(){try{var c=getCtx(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type="sawtooth";o.frequency.value=200;g.gain.setValueAtTime(.2,c.currentTime);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+.5);o.start(c.currentTime);o.stop(c.currentTime+.5);}catch(e){}}
-function shuffle(a){var b=a.slice();for(var i=b.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=b[i];b[i]=b[j];b[j]=t;}return b;}
-function genGrid(){var a=[];for(var i=1;i<=20;i++)a.push(i);return shuffle(a);}
-function pick(n){var a=[];for(var i=0;i<20;i++)a.push(i);return shuffle(a).slice(0,n);}
-function el(tag,attrs,children){
-var e=document.createElement(tag);
-if(attrs){for(var k in attrs){if(k==="style"&&typeof attrs[k]==="object"){for(var s in attrs[k])e.style[s]=attrs[k][s];}else if(k.indexOf("on")===0){e.addEventListener(k.slice(2).toLowerCase(),attrs[k]);}else{e.setAttribute(k,attrs[k]);}}}
-if(children){if(typeof children==="string")e.textContent=children;else if(Array.isArray(children))children.forEach(function(c){if(c)e.appendChild(typeof c==="string"?document.createTextNode(c):c);});else e.appendChild(children);}
-return e;
-}
-function html(s){var d=el("div");d.innerHTML=s;return d.firstChild||d;}
+'use strict';
 
-function startRound(r){
-state.round=r;state.grid=genGrid();
-var c=Math.min(r+1,20);state.hl=pick(c);
-state.correct=state.hl.reduce(function(s,i){return s+state.grid[i];},0);
-state.ans=””;state.result=null;state.timeLeft=3;lastTick=3;state.phase=“memorize”;
-playTick();
-if(timerC)clearInterval(timerC);if(timerT)clearTimeout(timerT);
-var st=Date.now();
-timerC=setInterval(function(){var el2=Date.now()-st,rem=Math.max(0,3-Math.floor(el2/1000));state.timeLeft=rem;if(rem<lastTick&&rem>0){lastTick=rem;playTick();}render();},50);
-timerT=setTimeout(function(){clearInterval(timerC);state.timeLeft=0;playFinal();state.phase=“answer”;render();},3000);
-render();
+/* ====== AUDIO ====== */
+var _ac = null;
+function ac() {
+if (!_ac) _ac = new (window.AudioContext || window.webkitAudioContext)();
+if (_ac.state === ‘suspended’) _ac.resume();
+return _ac;
 }
-
-function handleSubmit(){
-var n=parseInt(state.ans,10);if(isNaN(n))return;
-if(n===state.correct){playCorrect();state.result=“correct”;state.phase=“result”;state.best=Math.max(state.best,state.round);state.high=Math.max(state.high,state.round);}
-else{playWrong();state.result=“wrong”;state.phase=“result”;state.best=Math.max(state.best,state.round-1);state.high=Math.max(state.high,state.round-1);}
-render();
+function tone(f, t, d, v) {
+var c = ac(), o = c.createOscillator(), g = c.createGain();
+o.type = t; o.frequency.value = f;
+o.connect(g); g.connect(c.destination);
+g.gain.setValueAtTime(v, c.currentTime);
+g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + d);
+o.start(c.currentTime); o.stop(c.currentTime + d);
 }
-
-function makeScoreBar(){
-return el(“div”,{class:“score-bar”},[
-html(’<div class="score-label">ROUND <span class="score-val" style="color:#00ffe0">’+state.round+’</span></div>’),
-html(’<div class="score-label">TARGET <span class="score-val" style="color:#ffe100">’+Math.min(state.round+1,20)+’</span></div>’),
-html(’<div class="score-label">BEST <span class="score-val" style="color:#ff00c8">’+state.high+’</span></div>’)
-]);
+function sndTick() { tone(880,‘sine’,.15,.3); }
+function sndEnd() { tone(1200,‘square’,.4,.25); }
+function sndOk() {
+var c = ac(), fs = [523,659,784];
+for (var i = 0; i < 3; i++) {
+var o = c.createOscillator(), g = c.createGain();
+o.type=‘sine’; o.frequency.value=fs[i];
+o.connect(g); g.connect(c.destination);
+g.gain.setValueAtTime(.2, c.currentTime+i*.12);
+g.gain.exponentialRampToValueAtTime(.001, c.currentTime+i*.12+.2);
+o.start(c.currentTime+i*.12); o.stop(c.currentTime+i*.12+.2);
 }
+}
+function sndNg() { tone(200,‘sawtooth’,.5,.2); }
 
-function makeGrid(showNum,showHl){
-var g=el(“div”,{class:“grid”});
-state.grid.forEach(function(num,idx){
-var isH=state.hl.indexOf(idx)>=0;
-var cls=“cell”;
-if(showHl&&isH)cls+=” cell-hl”;
-else if(!showNum)cls+=” cell-hidden”;
-var c=el(“div”,{class:cls},showNum?String(num):””);
-g.appendChild(c);
-});
-return g;
+/* ====== UTIL ====== */
+function shuf(a){var b=a.slice(),i=b.length,t,j;while(–i>0){j=Math.floor(Math.random()*(i+1));t=b[i];b[i]=b[j];b[j]=t;}return b;}
+function rng(n){var a=[];for(var i=0;i<n;i++)a.push(i);return a;}
+function esc(s){return String(s);}
+
+/* ====== STATE ====== */
+var P=‘title’, R=1, G=[], H=[], A=’’, CR=0, TL=3, RS=null, HI=0;
+var _iv=null, _to=null, _sn=[];
+
+function clr(){
+clearInterval(_iv); _iv=null;
+clearTimeout(_to); _to=null;
+for(var i=0;i<_sn.length;i++)clearTimeout(_sn[i]);
+_sn=[];
 }
 
-function render(){
-var app=document.getElementById(“app”);
-app.innerHTML=””;
+/* ====== GAME ====== */
+function go(r){
+clr(); R=r;
+G=shuf(rng(20).map(function(i){return i+1;}));
+H=shuf(rng(20)).slice(0,Math.min(r+1,20));
+CR=0; for(var i=0;i<H.length;i++)CR+=G[H[i]];
+A=’’; RS=null; TL=3; P=‘memo’; draw();
+
+sndTick();
+_sn.push(setTimeout(sndTick, 1000));
+_sn.push(setTimeout(sndTick, 2000));
+
+var t0=Date.now();
+_iv=setInterval(function(){
+var rem=Math.max(0,Math.ceil((3000-(Date.now()-t0))/1000));
+if(rem!==TL){TL=rem;draw();}
+},50);
+
+_to=setTimeout(function(){
+clr(); TL=0; sndEnd(); P=‘ans’; draw();
+setTimeout(function(){var e=document.getElementById(‘ai’);if(e)e.focus();},100);
+},3000);
+}
+
+function submit(){
+var n=parseInt(A,10); if(isNaN(n))return;
+if(n===CR){sndOk();RS=‘ok’;HI=Math.max(HI,R);}
+else{sndNg();RS=‘ng’;HI=Math.max(HI,R-1);}
+P=‘res’; draw();
+}
+
+/* ====== RENDER ====== */
+var $=document.getElementById.bind(document);
+
+function barH(){
+return ‘<div class="bar">’
++’<span>ROUND <span class="bv" style="color:#00ffe0">’+R+’</span></span>’
++’<span>TARGET <span class="bv" style="color:#ffe100">’+Math.min(R+1,20)+’</span></span>’
++’<span>BEST <span class="bv" style="color:#ff00c8">’+HI+’</span></span></div>’;
+}
+
+function gridH(sn,sh){
+var o=’<div class="grid">’;
+for(var i=0;i<G.length;i++){
+var on=H.indexOf(i)>=0;
+var cls=‘c’;
+if(sh&&on)cls+=’ hl’;
+else if(!sn)cls+=’ hd’;
+o+=’<div class="'+cls+'">’+(sn?esc(G[i]):’’)+’</div>’;
+}
+return o+’</div>’;
+}
+
+function draw(){
+var app=$(‘app’);
+var s=’’;
+
+if(P===‘title’){
+app.className=‘main main–center’;
+s=’<div class="box tc fi">’
++’<div style="font-size:14px;letter-spacing:6px;color:#00ffe0;opacity:.6;margin-bottom:8px">NEURAL TRAINING SYSTEM</div>’
++’<h1 style="font-size:32px;font-weight:900;text-shadow:0 0 30px rgba(0,255,224,.3);margin-bottom:4px">記憶×暗算</h1>’
++’<div style="color:#ff00c8;font-size:14px;font-weight:600;letter-spacing:4px;margin-bottom:32px">C H A L L E N G E</div>’
++’<div style="background:rgba(10,25,50,.85);border:1px solid rgba(0,255,224,.2);border-radius:12px;padding:20px 24px;max-width:300px;margin:0 auto 28px;text-align:left;font-size:13px;line-height:2;color:#5a7a9a">’
++’<div><span style="color:#00ffe0">▸</span> 4×5グリッドに1〜20が配置</div>’
++’<div><span style="color:#00ffe0">▸</span> 光る数字を<span style="color:#ffe100;font-weight:700">3秒</span>で記憶</div>’
++’<div><span style="color:#00ffe0">▸</span> 合計値を回答</div>’
++’<div><span style="color:#00ffe0">▸</span> ラウンドごとに光る数が増加</div></div>’;
+if(HI>0) s+=’<div class="dim" style="font-size:12px;margin-bottom:16px">HIGH SCORE: <span style="color:#ff00c8;font-weight:800;font-size:18px">’+HI+’</span></div>’;
+s+=’<button class="btn" id="startB" style="padding:14px 48px;font-size:16px;letter-spacing:4px">INITIALIZE</button></div>’;
+}
+
+else if(P===‘memo’){
+app.className=‘main’;
+var tc=TL<=1?’#ff3366’:’#00ffe0’;
+s=’<div class="box">’+barH()
++’<div class="tc" style="margin-bottom:14px">’
++’<div style="display:inline-flex;align-items:center;gap:10px;background:rgba(0,255,224,.08);border:1px solid rgba(0,255,224,.2);border-radius:8px;padding:8px 24px">’
++’<span class="dim" style="font-size:11px;letter-spacing:2px">TIME</span>’
++’<span style="color:'+tc+';font-weight:900;font-size:28px;font-variant-numeric:tabular-nums;text-shadow:0 0 16px '+tc+';animation:cp 1s ease infinite">’+TL+’</span>’
++’</div></div>’
++gridH(true,true)
++’<p class="dim tc" style="font-size:11px;margin-top:14px;letter-spacing:1px">MEMORIZE HIGHLIGHTED VALUES</p></div>’;
+}
+
+else if(P===‘ans’){
+app.className=‘main’;
+s=’<div class="box fi" id="ansP">’+barH()
++’<div class="tc" style="margin-bottom:24px">’
++’<div style="font-size:12px;letter-spacing:3px;color:#00ffe0;opacity:.6;margin-bottom:8px">INPUT REQUIRED</div>’
++’<p style="font-size:18px;font-weight:700;margin-bottom:4px">光った数字の合計は？</p>’
++’<p class="dim" style="font-size:12px">画面タップで入力開始</p></div>’
++’<div style="max-width:280px;margin:0 auto">’
++’<input type="number" inputmode="numeric" id="ai" class="inp" placeholder="0" value="'+esc(A)+'">’
++’<button class="btn" id="subB" style="width:100%;padding:12px;font-size:15px">SUBMIT</button>’
++’</div></div>’;
+}
+
+else if(P===‘res’){
+app.className=‘main’;
+var ok=RS===‘ok’, co=ok?’#00ff88’:’#ff3366’;
+var sorted=H.slice().sort(function(a,b){return G[a]-G[b];});
+var tags=’’; for(var i=0;i<sorted.length;i++)tags+=’<span class="tag">’+esc(G[sorted[i]])+’</span>’;
 
 ```
-if(state.phase==="title"){
-var wrap=el("div",{class:"center-page"});
-var inner=el("div",{style:{textAlign:"center",animation:"fadeSlideUp 0.6s ease"}});
-inner.innerHTML='<div style="font-size:14px;letter-spacing:6px;color:#00ffe0;margin-bottom:8px;opacity:.6">NEURAL TRAINING SYSTEM</div>'
-+'<h1 style="color:#e0f0ff;font-size:32px;font-weight:900;margin:0 0 4px;text-shadow:0 0 30px rgba(0,255,224,0.3)">記憶×暗算</h1>'
-+'<div style="color:#ff00c8;font-size:14px;font-weight:600;letter-spacing:4px;margin:0 0 32px">C H A L L E N G E</div>'
-+'<div style="background:rgba(10,25,50,0.85);border:1px solid rgba(0,255,224,0.2);border-radius:12px;padding:20px 24px;margin:0 auto 28px;max-width:300px;text-align:left;font-size:13px;line-height:2;color:#5a7a9a">'
-+'<div><span style="color:#00ffe0">▸</span> 4×5グリッドに1〜20が配置</div>'
-+'<div><span style="color:#00ffe0">▸</span> 光る数字を<span style="color:#ffe100;font-weight:700">3秒</span>で記憶</div>'
-+'<div><span style="color:#00ffe0">▸</span> 合計値を回答</div>'
-+'<div><span style="color:#00ffe0">▸</span> ラウンドごとに光る数が増加</div></div>';
-if(state.high>0)inner.innerHTML+='<div style="color:#5a7a9a;font-size:12px;margin-bottom:16px">HIGH SCORE: <span style="color:#ff00c8;font-weight:800;font-size:18px">'+state.high+'</span></div>';
-var btn=el("button",{class:"btn",style:{padding:"14px 48px",fontSize:"16px",letterSpacing:"4px"},onClick:function(){getCtx();state.round=1;state.best=0;startRound(1);}},"INITIALIZE");
-inner.appendChild(btn);
-wrap.appendChild(inner);
-app.appendChild(wrap);
-}
-
-else if(state.phase==="memorize"){
-var wrap=el("div",{class:"page"});
-var cont=el("div",{class:"container"});
-cont.appendChild(makeScoreBar());
-var tc=state.timeLeft<=1?"#ff3366":"#00ffe0";
-cont.appendChild(html('<div style="text-align:center;margin-bottom:14px"><div style="display:inline-flex;align-items:center;gap:10px;background:rgba(0,255,224,0.08);border:1px solid rgba(0,255,224,0.2);border-radius:8px;padding:8px 24px"><span style="color:#5a7a9a;font-size:11px;letter-spacing:2px">TIME</span><span style="color:'+tc+';font-weight:900;font-size:28px;font-variant-numeric:tabular-nums;text-shadow:0 0 16px '+tc+';animation:counterPulse 1s ease infinite">'+state.timeLeft+'</span></div></div>'));
-cont.appendChild(makeGrid(true,true));
-cont.appendChild(html('<p style="color:#5a7a9a;font-size:11px;text-align:center;margin-top:14px;letter-spacing:1px">MEMORIZE HIGHLIGHTED VALUES</p>'));
-wrap.appendChild(cont);
-app.appendChild(wrap);
-}
-
-else if(state.phase==="answer"){
-var wrap=el("div",{class:"page",onClick:function(){var inp=document.getElementById("ans-input");if(inp){inp.focus();inp.click();}}});
-var cont=el("div",{class:"container",style:{animation:"fadeSlideUp 0.4s ease"}});
-cont.appendChild(makeScoreBar());
-cont.appendChild(html('<div style="text-align:center;margin-bottom:24px"><div style="font-size:12px;letter-spacing:3px;color:#00ffe0;margin-bottom:8px;opacity:.6">INPUT REQUIRED</div><p style="color:#e0f0ff;font-size:18px;font-weight:700;margin:0 0 4px">光った数字の合計は？</p><p style="color:#5a7a9a;font-size:12px;margin:0">画面タップで入力開始</p></div>'));
-var form=el("div",{style:{maxWidth:"280px",margin:"0 auto"}});
-var inp=el("input",{type:"number",inputMode:"numeric",id:"ans-input",class:"input-ans",placeholder:"0",onInput:function(e){state.ans=e.target.value;},onKeydown:function(e){if(e.key==="Enter")handleSubmit();}});
-form.appendChild(inp);
-var sub=el("button",{class:"btn",style:{width:"100%",padding:"12px",fontSize:"15px"},onClick:function(e){e.stopPropagation();handleSubmit();}},"SUBMIT");
-form.appendChild(sub);
-cont.appendChild(form);
-wrap.appendChild(cont);
-app.appendChild(wrap);
-}
-
-else if(state.phase==="result"){
-var ok=state.result==="correct";
-var ac=ok?"#00ff88":"#ff3366";
-var wrap=el("div",{class:"page"});
-var cont=el("div",{class:"container",style:{animation:"fadeSlideUp 0.4s ease"}});
-cont.appendChild(makeScoreBar());
-var rhtml='<div style="text-align:center;margin-bottom:20px">'
-+'<div style="font-size:14px;letter-spacing:4px;color:'+ac+';font-weight:800;margin-bottom:4px;text-shadow:0 0 20px '+ac+'">'+(ok?"[ CORRECT ]":"[ FAILED ]")+'</div>'
-+'<div style="background:rgba(10,25,50,0.85);border:1px solid '+ac+'40;border-radius:12px;padding:20px;margin:16px auto;display:inline-block;min-width:200px">'
-+'<div style="color:#5a7a9a;font-size:11px;letter-spacing:2px;margin-bottom:4px">ANSWER</div>'
-+'<div style="color:#00ff88;font-size:36px;font-weight:900;text-shadow:0 0 16px #00ff88">'+state.correct+'</div>';
-if(!ok)rhtml+='<div style="color:#5a7a9a;font-size:11px;letter-spacing:2px;margin-top:12px;margin-bottom:4px">YOUR INPUT</div><div style="color:#ff3366;font-size:24px;font-weight:700">'+state.ans+'</div>';
-rhtml+='</div></div>';
-cont.appendChild(html(rhtml));
-
-var sorted=state.hl.slice().sort(function(a,b){return state.grid[a]-state.grid[b];});
-var tags=sorted.map(function(i){return'<span class="tag">'+state.grid[i]+'</span>';}).join("");
-cont.appendChild(html('<div style="text-align:center;margin-bottom:16px"><div style="color:#5a7a9a;font-size:11px;letter-spacing:2px;margin-bottom:8px">HIGHLIGHTED VALUES</div><div style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px">'+tags+'</div></div>'));
-
+s='<div class="box fi">'+barH()
++'<div class="tc" style="margin-bottom:20px">'
++'<div style="font-size:14px;letter-spacing:4px;color:'+co+';font-weight:800;text-shadow:0 0 20px '+co+';margin-bottom:4px">'+(ok?'[ CORRECT ]':'[ FAILED ]')+'</div>'
++'<div style="background:rgba(10,25,50,.85);border:1px solid '+co+'40;border-radius:12px;padding:20px;margin:16px auto;display:inline-block;min-width:200px">'
++'<div class="dim" style="font-size:11px;letter-spacing:2px;margin-bottom:4px">ANSWER</div>'
++'<div style="color:#00ff88;font-size:36px;font-weight:900;text-shadow:0 0 16px #00ff88">'+CR+'</div>';
+if(!ok) s+='<div class="dim" style="font-size:11px;letter-spacing:2px;margin-top:12px;margin-bottom:4px">YOUR INPUT</div><div style="color:#ff3366;font-size:24px;font-weight:700">'+esc(A)+'</div>';
+s+='</div></div>'
++'<div class="tc" style="margin-bottom:16px"><div class="dim" style="font-size:11px;letter-spacing:2px;margin-bottom:8px">HIGHLIGHTED VALUES</div>'
++'<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px">'+tags+'</div></div>';
 if(!ok){
-cont.appendChild(html('<div style="text-align:center;margin-bottom:20px;padding:12px;background:rgba(255,0,200,0.05);border:1px solid rgba(255,0,200,0.2);border-radius:8px"><div style="color:#5a7a9a;font-size:11px;letter-spacing:2px">REACHED ROUND</div><div style="color:#ff00c8;font-weight:900;font-size:28px;text-shadow:0 0 12px #ff00c8">'+state.round+'</div><div style="color:#5a7a9a;font-size:11px;margin-top:4px">HIGH SCORE: <span style="color:#ff00c8;font-weight:800">'+state.high+'</span></div></div>'));
+s+='<div class="tc" style="margin-bottom:20px;padding:12px;background:rgba(255,0,200,.05);border:1px solid rgba(255,0,200,.2);border-radius:8px">'
++'<div class="dim" style="font-size:11px;letter-spacing:2px">REACHED ROUND</div>'
++'<div style="color:#ff00c8;font-weight:900;font-size:28px;text-shadow:0 0 12px #ff00c8">'+R+'</div>'
++'<div class="dim" style="font-size:11px;margin-top:4px">HIGH SCORE: <span style="color:#ff00c8;font-weight:800">'+HI+'</span></div></div>';
 }
-
-var btnWrap=el("div",{style:{display:"flex",justifyContent:"center"}});
-if(ok){
-btnWrap.appendChild(el("button",{class:"btn btn-green",style:{padding:"12px 32px",fontSize:"14px"},onClick:function(){var n=state.round+1;setRound=n;startRound(n);}},"NEXT →"));
-}else{
-btnWrap.appendChild(el("button",{class:"btn",style:{padding:"12px 32px",fontSize:"14px"},onClick:function(){getCtx();state.round=1;state.best=0;startRound(1);}},"RETRY"));
-}
-cont.appendChild(btnWrap);
-wrap.appendChild(cont);
-app.appendChild(wrap);
-}
+s+='<div style="display:flex;justify-content:center">';
+if(ok) s+='<button class="btn gr" id="nextB" style="padding:12px 32px;font-size:14px">NEXT →</button>';
+else s+='<button class="btn" id="retryB" style="padding:12px 32px;font-size:14px">RETRY</button>';
+s+='</div></div>';
 ```
 
 }
 
-render();
+app.innerHTML=s;
+bind();
+}
+
+/* ====== EVENTS ====== */
+function bind(){
+var startB=$(‘startB’), subB=$(‘subB’), nextB=$(‘nextB’), retryB=$(‘retryB’), ai=$(‘ai’), ansP=$(‘ansP’);
+if(startB) startB.onclick=function(){ ac(); R=1; go(1); };
+if(ai){
+ai.oninput=function(e){ A=e.target.value; };
+ai.onkeydown=function(e){ if(e.key===‘Enter’) submit(); };
+}
+if(subB) subB.onclick=function(e){ e.stopPropagation(); submit(); };
+if(ansP) ansP.onclick=function(){ var e=$(‘ai’); if(e)e.focus(); };
+if(nextB) nextB.onclick=function(){ go(R+1); };
+if(retryB) retryB.onclick=function(){ ac(); R=1; go(1); };
+}
+
+draw();
 })();
 </script>
 
