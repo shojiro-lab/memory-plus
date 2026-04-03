@@ -7,86 +7,193 @@
 <title>記憶×暗算チャレンジ</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#050a18;font-family:'SF Mono','Fira Code','Consolas',monospace;overflow-x:hidden}
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+body{background:#050a18;font-family:'SF Mono','Fira Code','Consolas',monospace;overflow-x:hidden;color:#e0f0ff}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 input[type=number]{-moz-appearance:textfield}
 @keyframes gridPulse{0%,100%{box-shadow:0 0 30px rgba(0,255,255,.05)}50%{box-shadow:0 0 50px rgba(0,255,255,.12)}}
 @keyframes hlGlow{0%,100%{box-shadow:0 0 12px rgba(0,255,200,.6),inset 0 0 12px rgba(0,255,200,.15)}50%{box-shadow:0 0 24px rgba(0,255,200,.9),inset 0 0 20px rgba(0,255,200,.25)}}
 @keyframes scanline{0%{transform:translateY(-100%)}100%{transform:translateY(100vh)}}
 @keyframes fadeSlideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 @keyframes counterPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+#root{min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#0a1628 0%,#050a18 70%);position:relative;overflow:hidden}
+.scan-wrap{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:0}
+.scan-line{position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(0,255,224,.25),transparent);animation:scanline 4s linear infinite}
+.scan-grid{position:absolute;inset:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,224,.015) 2px,rgba(0,255,224,.015) 4px)}
+.page{padding:16px;position:relative;z-index:1}
+.center-page{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:16px}
+.container{max-width:360px;margin:0 auto}
+.score-bar{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;margin-bottom:12px;background:rgba(0,255,224,.05);border:1px solid rgba(0,255,224,.2);border-radius:8px}
+.score-label{font-size:11px;color:#5a7a9a;letter-spacing:1px}
+.score-val{font-weight:800;font-size:18px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-width:320px;margin:0 auto;animation:gridPulse 3s ease infinite}
+.cell{border-radius:8px;display:flex;align-items:center;justify-content:center;height:52px;font-size:20px;font-weight:800;transition:all .3s;background:rgba(10,25,50,.85);border:1px solid rgba(0,255,224,.08);color:#e0f0ff}
+.cell-hl{background:linear-gradient(135deg,rgba(0,255,200,.25),rgba(0,255,224,.1));border:1px solid #00ffe0;color:#00ffe0;animation:hlGlow 1.5s ease infinite;text-shadow:0 0 12px #00ffe0}
+.cell-hidden{color:transparent}
+.btn{background:transparent;border:2px solid #00ffe0;border-radius:8px;color:#00ffe0;font-weight:700;cursor:pointer;letter-spacing:3px;font-family:inherit;text-shadow:0 0 8px #00ffe0;box-shadow:0 0 16px rgba(0,255,224,.15);transition:all .2s}
+.btn:active{background:rgba(0,255,224,.15)}
+.btn-green{border-color:#00ff88;color:#00ff88;text-shadow:0 0 8px #00ff88;box-shadow:0 0 16px rgba(0,255,136,.2)}
+.btn-green:active{background:rgba(0,255,136,.15)}
+.input-ans{width:100%;background:rgba(0,255,224,.05);border:2px solid rgba(0,255,224,.25);border-radius:8px;padding:14px 16px;font-size:28px;font-weight:800;color:#00ffe0;outline:none;text-align:center;font-family:inherit;text-shadow:0 0 10px rgba(0,255,224,.3);margin-bottom:10px}
+.input-ans:focus{border-color:#00ffe0}
+.tag{background:rgba(0,255,224,.15);color:#00ffe0;font-weight:700;border-radius:6px;padding:4px 10px;font-size:14px;border:1px solid rgba(0,255,224,.2);display:inline-block;margin:3px}
 </style>
 </head>
 <body>
-<div id="root"></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
-<script type="text/babel">
-const{useState,useEffect,useCallback,useRef}=React;
-const DISPLAY_TIME=3000;
-function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b}
-function genGrid(){return shuffle(Array.from({length:20},(_,i)=>i+1))}
-function pick(g,c){return shuffle(Array.from({length:20},(_,i)=>i)).slice(0,c)}
-
-let audioCtx=null;
-function ctx(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx}
-function playTick(){try{const c=ctx(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type=“sine”;o.frequency.value=880;g.gain.setValueAtTime(.3,c.currentTime);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+.15);o.start(c.currentTime);o.stop(c.currentTime+.15)}catch(e){}}
-function playFinal(){try{const c=ctx(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type=“square”;o.frequency.value=1200;g.gain.setValueAtTime(.25,c.currentTime);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+.4);o.start(c.currentTime);o.stop(c.currentTime+.4)}catch(e){}}
-function playCorrect(){try{const c=ctx();[523,659,784].forEach((f,i)=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type=“sine”;o.frequency.value=f;g.gain.setValueAtTime(.2,c.currentTime+i*.12);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+i*.12+.2);o.start(c.currentTime+i*.12);o.stop(c.currentTime+i*.12+.2)})}catch(e){}}
-function playWrong(){try{const c=ctx(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type=“sawtooth”;o.frequency.value=200;g.gain.setValueAtTime(.2,c.currentTime);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+.5);o.start(c.currentTime);o.stop(c.currentTime+.5)}catch(e){}}
-
-const bg=”#050a18”,cardBg=“rgba(10,25,50,0.85)”,cyan=”#00ffe0”,cyanDim=“rgba(0,255,224,0.15)”,magenta=”#ff00c8”,green=”#00ff88”,red=”#ff3366”,yellow=”#ffe100”,textP=”#e0f0ff”,textS=”#5a7a9a”,brd=“rgba(0,255,224,0.2)”;
-
-function App(){
-const[phase,setPhase]=useState(“title”);
-const[round,setRound]=useState(1);
-const[grid,setGrid]=useState([]);
-const[hl,setHl]=useState([]);
-const[ans,setAns]=useState(””);
-const[correct,setCorrect]=useState(0);
-const[timeLeft,setTimeLeft]=useState(3);
-const[result,setResult]=useState(null);
-const[best,setBest]=useState(0);
-const[high,setHigh]=useState(0);
-const tRef=useRef(null),cRef=useRef(null),iRef=useRef(null),ltRef=useRef(3);
-
-const startRound=useCallback(r=>{
-const g=genGrid(),c=Math.min(r+1,20),h=pick(g,c),s=h.reduce((a,i)=>a+g[i],0);
-setGrid(g);setHl(h);setCorrect(s);setAns(””);setResult(null);setTimeLeft(3);ltRef.current=3;setPhase(“memorize”);
-playTick();
-if(cRef.current)clearInterval(cRef.current);
-const st=Date.now();
-cRef.current=setInterval(()=>{const el=Date.now()-st,rem=Math.max(0,3-Math.floor(el/1000));setTimeLeft(rem);if(rem<ltRef.current&&rem>0){ltRef.current=rem;playTick()}},50);
-if(tRef.current)clearTimeout(tRef.current);
-tRef.current=setTimeout(()=>{if(cRef.current)clearInterval(cRef.current);setTimeLeft(0);playFinal();setPhase(“answer”)},DISPLAY_TIME);
-},[]);
-
-useEffect(()=>()=>{if(tRef.current)clearTimeout(tRef.current);if(cRef.current)clearInterval(cRef.current)},[]);
-
-const handleStart=()=>{ctx();setRound(1);setBest(0);startRound(1)};
-const handleSubmit=()=>{const n=parseInt(ans,10);if(isNaN(n))return;if(n===correct){playCorrect();setResult(“correct”);setPhase(“result”);setBest(p=>Math.max(p,round));setHigh(p=>Math.max(p,round))}else{playWrong();setResult(“wrong”);setPhase(“result”);setBest(p=>Math.max(p,round-1));setHigh(p=>Math.max(p,round-1))}};
-const handleNext=()=>{if(result===“correct”){const n=round+1;setRound(n);startRound(n)}};
-const handleKey=e=>{if(e.key===“Enter”)handleSubmit()};
-const tapFocus=()=>{if(iRef.current){iRef.current.focus();iRef.current.click()}};
-
-const ps={minHeight:“100vh”,background:`radial-gradient(ellipse at 50% 0%,#0a1628 0%,${bg} 70%)`,fontFamily:”‘SF Mono’,‘Fira Code’,‘Consolas’,monospace”,padding:16,position:“relative”,overflow:“hidden”};
-const scan=<div style={{position:“fixed”,top:0,left:0,right:0,bottom:0,pointerEvents:“none”,zIndex:0}}><div style={{position:“absolute”,top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,transparent,${cyan}40,transparent)`,animation:“scanline 4s linear infinite”}}/><div style={{position:“absolute”,inset:0,backgroundImage:`repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,224,0.015) 2px,rgba(0,255,224,0.015) 4px)`}}/></div>;
-const bar=<div style={{display:“flex”,justifyContent:“space-between”,alignItems:“center”,padding:“8px 12px”,marginBottom:12,background:“rgba(0,255,224,0.05)”,border:`1px solid ${brd}`,borderRadius:8}}><div style={{fontSize:11,color:textS,letterSpacing:1}}>ROUND <span style={{color:cyan,fontWeight:800,fontSize:18}}>{round}</span></div><div style={{fontSize:11,color:textS,letterSpacing:1}}>TARGET <span style={{color:yellow,fontWeight:800,fontSize:18}}>{Math.min(round+1,20)}</span></div><div style={{fontSize:11,color:textS,letterSpacing:1}}>BEST <span style={{color:magenta,fontWeight:800,fontSize:18}}>{high}</span></div></div>;
-
-const renderGrid=(sn,sh)=><div style={{display:“grid”,gridTemplateColumns:“repeat(4,1fr)”,gap:6,maxWidth:320,margin:“0 auto”,animation:“gridPulse 3s ease infinite”}}>{grid.map((n,i)=>{const isH=hl.includes(i);return<div key={i}style={{background:sh&&isH?`linear-gradient(135deg,rgba(0,255,200,0.25),rgba(0,255,224,0.1))`:cardBg,border:sh&&isH?`1px solid ${cyan}`:`1px solid rgba(0,255,224,0.08)`,borderRadius:8,display:“flex”,alignItems:“center”,justifyContent:“center”,height:52,fontSize:20,fontWeight:800,color:sh&&isH?cyan:sn?textP:“transparent”,animation:sh&&isH?“hlGlow 1.5s ease infinite”:“none”,textShadow:sh&&isH?`0 0 12px ${cyan}`:“none”}}>{sn?n:””}</div>})}</div>;
-
-if(phase===“title”)return<div style={{…ps,display:“flex”,alignItems:“center”,justifyContent:“center”}}>{scan}<div style={{textAlign:“center”,zIndex:1,animation:“fadeSlideUp 0.6s ease”}}><div style={{fontSize:14,letterSpacing:6,color:cyan,marginBottom:8,opacity:.6}}>NEURAL TRAINING SYSTEM</div><h1 style={{color:textP,fontSize:32,fontWeight:900,margin:“0 0 4px”,textShadow:`0 0 30px rgba(0,255,224,0.3)`}}>記憶×暗算</h1><div style={{color:magenta,fontSize:14,fontWeight:600,letterSpacing:4,margin:“0 0 32px”}}>C H A L L E N G E</div><div style={{background:cardBg,border:`1px solid ${brd}`,borderRadius:12,padding:“20px 24px”,marginBottom:28,maxWidth:300,margin:“0 auto 28px”,textAlign:“left”,fontSize:13,lineHeight:2,color:textS}}><div><span style={{color:cyan}}>▸</span> 4×5グリッドに1〜20が配置</div><div><span style={{color:cyan}}>▸</span> 光る数字を<span style={{color:yellow,fontWeight:700}}>3秒</span>で記憶</div><div><span style={{color:cyan}}>▸</span> 合計値を回答</div><div><span style={{color:cyan}}>▸</span> ラウンドごとに光る数が増加</div></div>{high>0&&<div style={{color:textS,fontSize:12,marginBottom:16}}>HIGH SCORE: <span style={{color:magenta,fontWeight:800,fontSize:18}}>{high}</span></div>}<button onClick={handleStart}style={{background:“transparent”,color:cyan,border:`2px solid ${cyan}`,borderRadius:8,padding:“14px 48px”,fontSize:16,fontWeight:700,cursor:“pointer”,letterSpacing:4,textShadow:`0 0 10px ${cyan}`,boxShadow:`0 0 20px rgba(0,255,224,0.2),inset 0 0 20px rgba(0,255,224,0.05)`,transition:“all 0.2s”}}>INITIALIZE</button></div></div>;
-
-if(phase===“memorize”)return<div style={ps}>{scan}<div style={{maxWidth:360,margin:“0 auto”,zIndex:1,position:“relative”}}>{bar}<div style={{textAlign:“center”,marginBottom:14}}><div style={{display:“inline-flex”,alignItems:“center”,gap:10,background:“rgba(0,255,224,0.08)”,border:`1px solid ${brd}`,borderRadius:8,padding:“8px 24px”}}><span style={{color:textS,fontSize:11,letterSpacing:2}}>TIME</span><span style={{color:timeLeft<=1?red:cyan,fontWeight:900,fontSize:28,fontVariantNumeric:“tabular-nums”,textShadow:`0 0 16px ${timeLeft<=1?red:cyan}`,animation:“counterPulse 1s ease infinite”}}>{timeLeft}</span></div></div>{renderGrid(true,true)}<p style={{color:textS,fontSize:11,textAlign:“center”,marginTop:14,letterSpacing:1}}>MEMORIZE HIGHLIGHTED VALUES</p></div></div>;
-
-if(phase===“answer”)return<div style={ps}onClick={tapFocus}>{scan}<div style={{maxWidth:360,margin:“0 auto”,zIndex:1,position:“relative”,animation:“fadeSlideUp 0.4s ease”}}>{bar}<div style={{textAlign:“center”,marginBottom:24}}><div style={{fontSize:12,letterSpacing:3,color:cyan,marginBottom:8,opacity:.6}}>INPUT REQUIRED</div><p style={{color:textP,fontSize:18,fontWeight:700,margin:“0 0 4px”}}>光った数字の合計は？</p><p style={{color:textS,fontSize:12,margin:0}}>画面タップで入力開始</p></div><div style={{maxWidth:280,margin:“0 auto”}}><input ref={iRef}type=“number”inputMode=“numeric”value={ans}onChange={e=>setAns(e.target.value)}onKeyDown={handleKey}placeholder=“0”style={{width:“100%”,boxSizing:“border-box”,background:“rgba(0,255,224,0.05)”,border:`2px solid ${cyan}40`,borderRadius:8,padding:“14px 16px”,fontSize:28,fontWeight:800,color:cyan,outline:“none”,textAlign:“center”,fontFamily:“inherit”,textShadow:`0 0 10px rgba(0,255,224,0.3)`,marginBottom:10}}/><button onClick={e=>{e.stopPropagation();handleSubmit()}}style={{width:“100%”,background:“transparent”,color:cyan,border:`2px solid ${cyan}`,borderRadius:8,padding:“12px”,fontSize:15,fontWeight:700,cursor:“pointer”,letterSpacing:3,textShadow:`0 0 8px ${cyan}`,boxShadow:`0 0 16px rgba(0,255,224,0.15)`}}>SUBMIT</button></div></div></div>;
-
-if(phase===“result”){const ok=result===“correct”,ac=ok?green:red;return<div style={ps}>{scan}<div style={{maxWidth:360,margin:“0 auto”,zIndex:1,position:“relative”,animation:“fadeSlideUp 0.4s ease”}}>{bar}<div style={{textAlign:“center”,marginBottom:20}}><div style={{fontSize:14,letterSpacing:4,color:ac,fontWeight:800,marginBottom:4,textShadow:`0 0 20px ${ac}`}}>{ok?”[ CORRECT ]”:”[ FAILED ]”}</div><div style={{background:cardBg,border:`1px solid ${ac}40`,borderRadius:12,padding:20,margin:“16px auto”,display:“inline-block”,minWidth:200}}><div style={{color:textS,fontSize:11,letterSpacing:2,marginBottom:4}}>ANSWER</div><div style={{color:green,fontSize:36,fontWeight:900,textShadow:`0 0 16px ${green}`}}>{correct}</div>{!ok&&<><div style={{color:textS,fontSize:11,letterSpacing:2,marginTop:12,marginBottom:4}}>YOUR INPUT</div><div style={{color:red,fontSize:24,fontWeight:700}}>{ans}</div></>}</div></div><div style={{textAlign:“center”,marginBottom:16}}><div style={{color:textS,fontSize:11,letterSpacing:2,marginBottom:8}}>HIGHLIGHTED VALUES</div><div style={{display:“flex”,flexWrap:“wrap”,justifyContent:“center”,gap:6}}>{[…hl].sort((a,b)=>grid[a]-grid[b]).map(i=><span key={i}style={{background:cyanDim,color:cyan,fontWeight:700,borderRadius:6,padding:“4px 10px”,fontSize:14,border:`1px solid ${brd}`}}>{grid[i]}</span>)}</div></div>{!ok&&<div style={{textAlign:“center”,marginBottom:20,padding:12,background:“rgba(255,0,200,0.05)”,border:`1px solid rgba(255,0,200,0.2)`,borderRadius:8}}><div style={{color:textS,fontSize:11,letterSpacing:2}}>REACHED ROUND</div><div style={{color:magenta,fontWeight:900,fontSize:28,textShadow:`0 0 12px ${magenta}`}}>{round}</div><div style={{color:textS,fontSize:11,marginTop:4}}>HIGH SCORE: <span style={{color:magenta,fontWeight:800}}>{high}</span></div></div>}<div style={{display:“flex”,gap:8,justifyContent:“center”}}>{ok?<button onClick={handleNext}style={{background:“transparent”,color:green,border:`2px solid ${green}`,borderRadius:8,padding:“12px 32px”,fontSize:14,fontWeight:700,cursor:“pointer”,letterSpacing:3,textShadow:`0 0 8px ${green}`,boxShadow:`0 0 16px rgba(0,255,136,0.2)`}}>NEXT →</button>:<button onClick={handleStart}style={{background:“transparent”,color:cyan,border:`2px solid ${cyan}`,borderRadius:8,padding:“12px 32px”,fontSize:14,fontWeight:700,cursor:“pointer”,letterSpacing:3,textShadow:`0 0 8px ${cyan}`,boxShadow:`0 0 16px rgba(0,255,224,0.2)`}}>RETRY</button>}</div></div></div>}
-return null;
+<div id="root">
+<div class="scan-wrap"><div class="scan-line"></div><div class="scan-grid"></div></div>
+<div id="app"></div>
+</div>
+<script>
+(function(){
+var state={phase:"title",round:1,grid:[],hl:[],ans:"",correct:0,timeLeft:3,result:null,best:0,high:0};
+var timerT=null,timerC=null,lastTick=3;
+var audioCtx=null;
+function getCtx(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx;}
+function playTick(){try{var c=getCtx(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type="sine";o.frequency.value=880;g.gain.setValueAtTime(.3,c.currentTime);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+.15);o.start(c.currentTime);o.stop(c.currentTime+.15);}catch(e){}}
+function playFinal(){try{var c=getCtx(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type="square";o.frequency.value=1200;g.gain.setValueAtTime(.25,c.currentTime);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+.4);o.start(c.currentTime);o.stop(c.currentTime+.4);}catch(e){}}
+function playCorrect(){try{var c=getCtx();[523,659,784].forEach(function(f,i){var o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type="sine";o.frequency.value=f;g.gain.setValueAtTime(.2,c.currentTime+i*.12);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+i*.12+.2);o.start(c.currentTime+i*.12);o.stop(c.currentTime+i*.12+.2);});}catch(e){}}
+function playWrong(){try{var c=getCtx(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type="sawtooth";o.frequency.value=200;g.gain.setValueAtTime(.2,c.currentTime);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+.5);o.start(c.currentTime);o.stop(c.currentTime+.5);}catch(e){}}
+function shuffle(a){var b=a.slice();for(var i=b.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=b[i];b[i]=b[j];b[j]=t;}return b;}
+function genGrid(){var a=[];for(var i=1;i<=20;i++)a.push(i);return shuffle(a);}
+function pick(n){var a=[];for(var i=0;i<20;i++)a.push(i);return shuffle(a).slice(0,n);}
+function el(tag,attrs,children){
+var e=document.createElement(tag);
+if(attrs){for(var k in attrs){if(k==="style"&&typeof attrs[k]==="object"){for(var s in attrs[k])e.style[s]=attrs[k][s];}else if(k.indexOf("on")===0){e.addEventListener(k.slice(2).toLowerCase(),attrs[k]);}else{e.setAttribute(k,attrs[k]);}}}
+if(children){if(typeof children==="string")e.textContent=children;else if(Array.isArray(children))children.forEach(function(c){if(c)e.appendChild(typeof c==="string"?document.createTextNode(c):c);});else e.appendChild(children);}
+return e;
 }
-ReactDOM.createRoot(document.getElementById(“root”)).render(<App/>);
+function html(s){var d=el("div");d.innerHTML=s;return d.firstChild||d;}
+
+function startRound(r){
+state.round=r;state.grid=genGrid();
+var c=Math.min(r+1,20);state.hl=pick(c);
+state.correct=state.hl.reduce(function(s,i){return s+state.grid[i];},0);
+state.ans=””;state.result=null;state.timeLeft=3;lastTick=3;state.phase=“memorize”;
+playTick();
+if(timerC)clearInterval(timerC);if(timerT)clearTimeout(timerT);
+var st=Date.now();
+timerC=setInterval(function(){var el2=Date.now()-st,rem=Math.max(0,3-Math.floor(el2/1000));state.timeLeft=rem;if(rem<lastTick&&rem>0){lastTick=rem;playTick();}render();},50);
+timerT=setTimeout(function(){clearInterval(timerC);state.timeLeft=0;playFinal();state.phase=“answer”;render();},3000);
+render();
+}
+
+function handleSubmit(){
+var n=parseInt(state.ans,10);if(isNaN(n))return;
+if(n===state.correct){playCorrect();state.result=“correct”;state.phase=“result”;state.best=Math.max(state.best,state.round);state.high=Math.max(state.high,state.round);}
+else{playWrong();state.result=“wrong”;state.phase=“result”;state.best=Math.max(state.best,state.round-1);state.high=Math.max(state.high,state.round-1);}
+render();
+}
+
+function makeScoreBar(){
+return el(“div”,{class:“score-bar”},[
+html(’<div class="score-label">ROUND <span class="score-val" style="color:#00ffe0">’+state.round+’</span></div>’),
+html(’<div class="score-label">TARGET <span class="score-val" style="color:#ffe100">’+Math.min(state.round+1,20)+’</span></div>’),
+html(’<div class="score-label">BEST <span class="score-val" style="color:#ff00c8">’+state.high+’</span></div>’)
+]);
+}
+
+function makeGrid(showNum,showHl){
+var g=el(“div”,{class:“grid”});
+state.grid.forEach(function(num,idx){
+var isH=state.hl.indexOf(idx)>=0;
+var cls=“cell”;
+if(showHl&&isH)cls+=” cell-hl”;
+else if(!showNum)cls+=” cell-hidden”;
+var c=el(“div”,{class:cls},showNum?String(num):””);
+g.appendChild(c);
+});
+return g;
+}
+
+function render(){
+var app=document.getElementById(“app”);
+app.innerHTML=””;
+
+```
+if(state.phase==="title"){
+var wrap=el("div",{class:"center-page"});
+var inner=el("div",{style:{textAlign:"center",animation:"fadeSlideUp 0.6s ease"}});
+inner.innerHTML='<div style="font-size:14px;letter-spacing:6px;color:#00ffe0;margin-bottom:8px;opacity:.6">NEURAL TRAINING SYSTEM</div>'
++'<h1 style="color:#e0f0ff;font-size:32px;font-weight:900;margin:0 0 4px;text-shadow:0 0 30px rgba(0,255,224,0.3)">記憶×暗算</h1>'
++'<div style="color:#ff00c8;font-size:14px;font-weight:600;letter-spacing:4px;margin:0 0 32px">C H A L L E N G E</div>'
++'<div style="background:rgba(10,25,50,0.85);border:1px solid rgba(0,255,224,0.2);border-radius:12px;padding:20px 24px;margin:0 auto 28px;max-width:300px;text-align:left;font-size:13px;line-height:2;color:#5a7a9a">'
++'<div><span style="color:#00ffe0">▸</span> 4×5グリッドに1〜20が配置</div>'
++'<div><span style="color:#00ffe0">▸</span> 光る数字を<span style="color:#ffe100;font-weight:700">3秒</span>で記憶</div>'
++'<div><span style="color:#00ffe0">▸</span> 合計値を回答</div>'
++'<div><span style="color:#00ffe0">▸</span> ラウンドごとに光る数が増加</div></div>';
+if(state.high>0)inner.innerHTML+='<div style="color:#5a7a9a;font-size:12px;margin-bottom:16px">HIGH SCORE: <span style="color:#ff00c8;font-weight:800;font-size:18px">'+state.high+'</span></div>';
+var btn=el("button",{class:"btn",style:{padding:"14px 48px",fontSize:"16px",letterSpacing:"4px"},onClick:function(){getCtx();state.round=1;state.best=0;startRound(1);}},"INITIALIZE");
+inner.appendChild(btn);
+wrap.appendChild(inner);
+app.appendChild(wrap);
+}
+
+else if(state.phase==="memorize"){
+var wrap=el("div",{class:"page"});
+var cont=el("div",{class:"container"});
+cont.appendChild(makeScoreBar());
+var tc=state.timeLeft<=1?"#ff3366":"#00ffe0";
+cont.appendChild(html('<div style="text-align:center;margin-bottom:14px"><div style="display:inline-flex;align-items:center;gap:10px;background:rgba(0,255,224,0.08);border:1px solid rgba(0,255,224,0.2);border-radius:8px;padding:8px 24px"><span style="color:#5a7a9a;font-size:11px;letter-spacing:2px">TIME</span><span style="color:'+tc+';font-weight:900;font-size:28px;font-variant-numeric:tabular-nums;text-shadow:0 0 16px '+tc+';animation:counterPulse 1s ease infinite">'+state.timeLeft+'</span></div></div>'));
+cont.appendChild(makeGrid(true,true));
+cont.appendChild(html('<p style="color:#5a7a9a;font-size:11px;text-align:center;margin-top:14px;letter-spacing:1px">MEMORIZE HIGHLIGHTED VALUES</p>'));
+wrap.appendChild(cont);
+app.appendChild(wrap);
+}
+
+else if(state.phase==="answer"){
+var wrap=el("div",{class:"page",onClick:function(){var inp=document.getElementById("ans-input");if(inp){inp.focus();inp.click();}}});
+var cont=el("div",{class:"container",style:{animation:"fadeSlideUp 0.4s ease"}});
+cont.appendChild(makeScoreBar());
+cont.appendChild(html('<div style="text-align:center;margin-bottom:24px"><div style="font-size:12px;letter-spacing:3px;color:#00ffe0;margin-bottom:8px;opacity:.6">INPUT REQUIRED</div><p style="color:#e0f0ff;font-size:18px;font-weight:700;margin:0 0 4px">光った数字の合計は？</p><p style="color:#5a7a9a;font-size:12px;margin:0">画面タップで入力開始</p></div>'));
+var form=el("div",{style:{maxWidth:"280px",margin:"0 auto"}});
+var inp=el("input",{type:"number",inputMode:"numeric",id:"ans-input",class:"input-ans",placeholder:"0",onInput:function(e){state.ans=e.target.value;},onKeydown:function(e){if(e.key==="Enter")handleSubmit();}});
+form.appendChild(inp);
+var sub=el("button",{class:"btn",style:{width:"100%",padding:"12px",fontSize:"15px"},onClick:function(e){e.stopPropagation();handleSubmit();}},"SUBMIT");
+form.appendChild(sub);
+cont.appendChild(form);
+wrap.appendChild(cont);
+app.appendChild(wrap);
+}
+
+else if(state.phase==="result"){
+var ok=state.result==="correct";
+var ac=ok?"#00ff88":"#ff3366";
+var wrap=el("div",{class:"page"});
+var cont=el("div",{class:"container",style:{animation:"fadeSlideUp 0.4s ease"}});
+cont.appendChild(makeScoreBar());
+var rhtml='<div style="text-align:center;margin-bottom:20px">'
++'<div style="font-size:14px;letter-spacing:4px;color:'+ac+';font-weight:800;margin-bottom:4px;text-shadow:0 0 20px '+ac+'">'+(ok?"[ CORRECT ]":"[ FAILED ]")+'</div>'
++'<div style="background:rgba(10,25,50,0.85);border:1px solid '+ac+'40;border-radius:12px;padding:20px;margin:16px auto;display:inline-block;min-width:200px">'
++'<div style="color:#5a7a9a;font-size:11px;letter-spacing:2px;margin-bottom:4px">ANSWER</div>'
++'<div style="color:#00ff88;font-size:36px;font-weight:900;text-shadow:0 0 16px #00ff88">'+state.correct+'</div>';
+if(!ok)rhtml+='<div style="color:#5a7a9a;font-size:11px;letter-spacing:2px;margin-top:12px;margin-bottom:4px">YOUR INPUT</div><div style="color:#ff3366;font-size:24px;font-weight:700">'+state.ans+'</div>';
+rhtml+='</div></div>';
+cont.appendChild(html(rhtml));
+
+var sorted=state.hl.slice().sort(function(a,b){return state.grid[a]-state.grid[b];});
+var tags=sorted.map(function(i){return'<span class="tag">'+state.grid[i]+'</span>';}).join("");
+cont.appendChild(html('<div style="text-align:center;margin-bottom:16px"><div style="color:#5a7a9a;font-size:11px;letter-spacing:2px;margin-bottom:8px">HIGHLIGHTED VALUES</div><div style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px">'+tags+'</div></div>'));
+
+if(!ok){
+cont.appendChild(html('<div style="text-align:center;margin-bottom:20px;padding:12px;background:rgba(255,0,200,0.05);border:1px solid rgba(255,0,200,0.2);border-radius:8px"><div style="color:#5a7a9a;font-size:11px;letter-spacing:2px">REACHED ROUND</div><div style="color:#ff00c8;font-weight:900;font-size:28px;text-shadow:0 0 12px #ff00c8">'+state.round+'</div><div style="color:#5a7a9a;font-size:11px;margin-top:4px">HIGH SCORE: <span style="color:#ff00c8;font-weight:800">'+state.high+'</span></div></div>'));
+}
+
+var btnWrap=el("div",{style:{display:"flex",justifyContent:"center"}});
+if(ok){
+btnWrap.appendChild(el("button",{class:"btn btn-green",style:{padding:"12px 32px",fontSize:"14px"},onClick:function(){var n=state.round+1;setRound=n;startRound(n);}},"NEXT →"));
+}else{
+btnWrap.appendChild(el("button",{class:"btn",style:{padding:"12px 32px",fontSize:"14px"},onClick:function(){getCtx();state.round=1;state.best=0;startRound(1);}},"RETRY"));
+}
+cont.appendChild(btnWrap);
+wrap.appendChild(cont);
+app.appendChild(wrap);
+}
+```
+
+}
+
+render();
+})();
 </script>
 
 </body>
