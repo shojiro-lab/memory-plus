@@ -3,13 +3,627 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>テスト</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>記憶×暗算チャレンジ</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+background: radial-gradient(ellipse at center, #0d1b3e 0%, #050a18 70%);
+min-height: 100vh;
+font-family: ‘SF Mono’, ‘Fira Code’, Consolas, monospace;
+color: #00ffe0;
+display: flex;
+flex-direction: column;
+align-items: center;
+overflow-x: hidden;
+position: relative;
+}
+
+/* Scanline overlay */
+body::after {
+content: ‘’;
+position: fixed;
+inset: 0;
+background: repeating-linear-gradient(
+0deg,
+transparent,
+transparent 2px,
+rgba(0,255,224,0.025) 2px,
+rgba(0,255,224,0.025) 4px
+);
+pointer-events: none;
+z-index: 999;
+animation: scanMove 8s linear infinite;
+}
+@keyframes scanMove {
+0% { background-position: 0 0; }
+100% { background-position: 0 100px; }
+}
+
+.wrapper {
+width: 100%;
+max-width: 360px;
+min-height: 100vh;
+display: flex;
+flex-direction: column;
+padding: 0 12px 24px;
+}
+
+/* ── Score Bar ── */
+.score-bar {
+display: flex;
+justify-content: space-between;
+padding: 10px 0 8px;
+border-bottom: 1px solid rgba(0,255,224,0.2);
+margin-bottom: 14px;
+flex-shrink: 0;
+}
+.score-item { text-align: center; flex: 1; }
+.score-label {
+font-size: 9px;
+letter-spacing: 2px;
+color: rgba(0,255,224,0.5);
+display: block;
+}
+.score-value {
+font-size: 22px;
+font-weight: bold;
+color: #ffe100;
+text-shadow: 0 0 10px #ffe100;
+}
+
+/* ── Screen sections ── */
+.screen { display: none; flex: 1; flex-direction: column; }
+.screen.active { display: flex; }
+
+/* ── Title Screen ── */
+.title-logo {
+text-align: center;
+margin: 20px 0 28px;
+}
+.title-logo h1 {
+font-size: 22px;
+letter-spacing: 3px;
+color: #00ffe0;
+text-shadow: 0 0 20px #00ffe0, 0 0 40px #00ffe0;
+line-height: 1.4;
+}
+.title-logo .sub {
+font-size: 10px;
+letter-spacing: 4px;
+color: #ff00c8;
+text-shadow: 0 0 10px #ff00c8;
+margin-top: 4px;
+}
+.rules-box {
+background: rgba(0,255,224,0.04);
+border: 1px solid rgba(0,255,224,0.2);
+border-radius: 4px;
+padding: 14px;
+margin-bottom: 22px;
+font-size: 12px;
+line-height: 1.8;
+color: rgba(0,255,224,0.75);
+}
+.rules-box .hl { color: #ffe100; }
+.hi-score-display {
+text-align: center;
+margin-bottom: 26px;
+font-size: 11px;
+letter-spacing: 2px;
+color: rgba(0,255,224,0.5);
+}
+.hi-score-display span {
+font-size: 28px;
+color: #ff00c8;
+text-shadow: 0 0 16px #ff00c8;
+display: block;
+margin-top: 4px;
+}
+
+/* ── Buttons ── */
+.btn {
+display: block;
+width: 100%;
+padding: 14px;
+background: transparent;
+border: 2px solid #00ffe0;
+border-radius: 4px;
+color: #00ffe0;
+font-family: inherit;
+font-size: 15px;
+letter-spacing: 4px;
+cursor: pointer;
+text-shadow: 0 0 10px #00ffe0;
+box-shadow: 0 0 12px rgba(0,255,224,0.2), inset 0 0 12px rgba(0,255,224,0.05);
+transition: all 0.15s;
+-webkit-tap-highlight-color: transparent;
+}
+.btn:active, .btn:hover {
+background: rgba(0,255,224,0.12);
+box-shadow: 0 0 24px rgba(0,255,224,0.5), inset 0 0 20px rgba(0,255,224,0.1);
+}
+.btn.magenta {
+border-color: #ff00c8;
+color: #ff00c8;
+text-shadow: 0 0 10px #ff00c8;
+box-shadow: 0 0 12px rgba(255,0,200,0.2), inset 0 0 12px rgba(255,0,200,0.05);
+}
+.btn.magenta:active, .btn.magenta:hover {
+background: rgba(255,0,200,0.12);
+box-shadow: 0 0 24px rgba(255,0,200,0.5), inset 0 0 20px rgba(255,0,200,0.1);
+}
+.btn.green {
+border-color: #00ff88;
+color: #00ff88;
+text-shadow: 0 0 10px #00ff88;
+box-shadow: 0 0 12px rgba(0,255,136,0.2), inset 0 0 12px rgba(0,255,136,0.05);
+}
+
+/* ── Memory Phase ── */
+.phase-label {
+text-align: center;
+font-size: 10px;
+letter-spacing: 4px;
+color: rgba(0,255,224,0.4);
+margin-bottom: 10px;
+}
+.countdown-wrap {
+text-align: center;
+margin-bottom: 12px;
+}
+.countdown-num {
+font-size: 56px;
+font-weight: bold;
+color: #ffe100;
+text-shadow: 0 0 20px #ffe100, 0 0 40px #ffe100;
+display: inline-block;
+animation: pulse 1s ease-in-out infinite;
+}
+@keyframes pulse {
+0%, 100% { transform: scale(1); opacity: 1; }
+50% { transform: scale(1.12); opacity: 0.85; }
+}
+
+/* ── Grid ── */
+.grid {
+display: grid;
+grid-template-columns: repeat(4, 1fr);
+gap: 6px;
+margin-bottom: 14px;
+}
+.cell {
+aspect-ratio: 1;
+display: flex;
+align-items: center;
+justify-content: center;
+border: 1px solid rgba(0,255,224,0.15);
+border-radius: 4px;
+font-size: 16px;
+font-weight: bold;
+background: rgba(0,255,224,0.03);
+color: rgba(0,255,224,0.5);
+transition: all 0.3s;
+cursor: default;
+user-select: none;
+-webkit-user-select: none;
+}
+.cell.lit {
+color: #ffe100;
+background: rgba(255,225,0,0.08);
+border-color: #ffe100;
+text-shadow: 0 0 12px #ffe100, 0 0 24px #ffe100;
+box-shadow: 0 0 10px rgba(255,225,0,0.3), inset 0 0 8px rgba(255,225,0,0.1);
+animation: glow 1.2s ease-in-out infinite alternate;
+}
+@keyframes glow {
+from { box-shadow: 0 0 8px rgba(255,225,0,0.3), inset 0 0 6px rgba(255,225,0,0.1); }
+to { box-shadow: 0 0 20px rgba(255,225,0,0.6), inset 0 0 14px rgba(255,225,0,0.2); }
+}
+.cell.hidden { color: transparent; border-color: rgba(0,255,224,0.08); }
+
+/* ── Answer Phase ── */
+.answer-prompt {
+text-align: center;
+font-size: 11px;
+letter-spacing: 2px;
+color: rgba(0,255,224,0.5);
+margin-bottom: 14px;
+}
+.answer-prompt strong { color: #ff00c8; font-size: 14px; }
+.input-wrap { margin-bottom: 10px; }
+.num-input {
+display: block;
+width: 100%;
+padding: 14px;
+background: rgba(0,255,224,0.06);
+border: 2px solid rgba(0,255,224,0.4);
+border-radius: 4px;
+color: #00ffe0;
+font-family: inherit;
+font-size: 28px;
+text-align: center;
+letter-spacing: 4px;
+outline: none;
+-webkit-appearance: none;
+appearance: none;
+caret-color: #ff00c8;
+}
+.num-input:focus { border-color: #00ffe0; box-shadow: 0 0 14px rgba(0,255,224,0.3); }
+
+/* ── Result Screen ── */
+.result-verdict {
+text-align: center;
+font-size: 42px;
+font-weight: bold;
+letter-spacing: 6px;
+margin: 10px 0 18px;
+}
+.result-verdict.correct {
+color: #00ff88;
+text-shadow: 0 0 20px #00ff88, 0 0 40px #00ff88;
+}
+.result-verdict.wrong {
+color: #ff3366;
+text-shadow: 0 0 20px #ff3366, 0 0 40px #ff3366;
+}
+.result-info {
+background: rgba(0,255,224,0.04);
+border: 1px solid rgba(0,255,224,0.15);
+border-radius: 4px;
+padding: 14px;
+margin-bottom: 14px;
+font-size: 12px;
+line-height: 2;
+}
+.result-info .row { display: flex; justify-content: space-between; }
+.result-info .lbl { color: rgba(0,255,224,0.45); letter-spacing: 1px; }
+.result-info .val { color: #ffe100; font-weight: bold; }
+.result-info .val.red { color: #ff3366; }
+.lit-nums {
+color: #ff00c8;
+font-size: 13px;
+word-break: break-all;
+margin-top: 4px;
+}
+.reached-round {
+text-align: center;
+margin-bottom: 18px;
+font-size: 11px;
+letter-spacing: 2px;
+color: rgba(0,255,224,0.5);
+}
+.reached-round span { color: #ff00c8; font-size: 26px; display: block; margin-top: 2px; }
+</style>
+
 </head>
-<body style="background:#050a18;color:#00ffe0;font-family:monospace;padding:40px;text-align:center">
-<h1 id="msg">読み込み中...</h1>
+<body>
+<div class="wrapper">
+
+<!-- ── Score Bar (hidden on title) ── -->
+
+<div class="score-bar" id="scoreBar" style="display:none">
+<div class="score-item">
+<span class="score-label">ROUND</span>
+<span class="score-value" id="sbRound">1</span>
+</div>
+<div class="score-item">
+<span class="score-label">TARGET</span>
+<span class="score-value" id="sbTarget">2</span>
+</div>
+<div class="score-item">
+<span class="score-label">BEST</span>
+<span class="score-value" id="sbBest">-</span>
+</div>
+</div>
+
+<!-- ── Title Screen ── -->
+
+<div class="screen active" id="screenTitle">
+<div class="title-logo">
+<h1>記憶×暗算<br>チャレンジ</h1>
+<div class="sub">MEMORY + MATH CHALLENGE</div>
+</div>
+<div class="rules-box">
+<div>① <span class="hl">3秒間</span>、光る数字を記憶する</div>
+<div>② 数字が消えたら合計値を暗算</div>
+<div>③ 正解するとラウンドが進む</div>
+<div>④ ラウンドが上がるほど光る数字が<span class="hl">増える</span></div>
+<div>⑤ 不正解でゲームオーバー</div>
+</div>
+<div class="hi-score-display">
+BEST ROUND<span id="titleBest">—</span>
+</div>
+<button class="btn magenta" id="btnInit" onclick="startGame()">INITIALIZE</button>
+</div>
+
+<!-- ── Memory Phase ── -->
+
+<div class="screen" id="screenMemory">
+<div class="phase-label">MEMORY PHASE — MEMORIZE THE GLOWING NUMBERS</div>
+<div class="countdown-wrap">
+<span class="countdown-num" id="cdNum">3</span>
+</div>
+<div class="grid" id="memGrid"></div>
+</div>
+
+<!-- ── Answer Phase ── -->
+
+<div class="screen" id="screenAnswer">
+<div class="phase-label">ANSWER PHASE — ENTER THE SUM</div>
+<div class="grid" id="ansGrid"></div>
+<div class="answer-prompt">光っていた数字の <strong>合計</strong> を入力</div>
+<div class="input-wrap">
+<input class="num-input" id="numInput" type="number" inputmode="numeric"
+pattern="[0-9]*" placeholder="0" autocomplete="off" autocorrect="off">
+</div>
+<button class="btn" onclick="submitAnswer()">SUBMIT</button>
+</div>
+
+<!-- ── Result Screen ── -->
+
+<div class="screen" id="screenResult">
+<div class="result-verdict" id="verdict"></div>
+<div class="result-info" id="resultInfo"></div>
+<div class="reached-round" id="reachedRound"></div>
+<button class="btn" id="btnNext" onclick="nextAction()"></button>
+</div>
+
+</div><!-- /wrapper -->
+
 <script>
-document.getElementById('msg').textContent = 'JavaScript動いてます！';
+'use strict';
+
+// ── State ──
+var audioCtx = null;
+var round = 1;
+var litIndices = [];
+var allNums = [];
+var correctSum = 0;
+var bestRound = 0;
+var cdTimer = null;
+var isCorrect = false;
+
+// ── LocalStorage ──
+function loadBest() {
+var v = parseInt(localStorage.getItem('mp_best') || '0', 10);
+bestRound = isNaN(v) ? 0 : v;
+updateBestDisplay();
+}
+function saveBest() {
+localStorage.setItem('mp_best', String(bestRound));
+}
+function updateBestDisplay() {
+var txt = bestRound > 0 ? String(bestRound) : '—';
+document.getElementById('titleBest').textContent = txt;
+document.getElementById('sbBest').textContent = bestRound > 0 ? String(bestRound) : '-';
+}
+
+// ── Audio ──
+function initAudio() {
+if (!audioCtx) {
+audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+if (audioCtx.state === 'suspended') {
+audioCtx.resume();
+}
+}
+function playTone(freq, type, dur, vol) {
+if (!audioCtx) return;
+try {
+var osc = audioCtx.createOscillator();
+var gain = audioCtx.createGain();
+osc.connect(gain);
+gain.connect(audioCtx.destination);
+osc.type = type;
+osc.frequency.value = freq;
+gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+osc.start(audioCtx.currentTime);
+osc.stop(audioCtx.currentTime + dur);
+} catch(e) {}
+}
+function playTick() { playTone(880, 'sine', 0.15, 0.3); }
+function playEnd() { playTone(1200, 'square', 0.4, 0.25); }
+function playWrong() { playTone(200, 'sawtooth', 0.5, 0.2); }
+function playCorrect() {
+var notes = [523, 659, 784];
+var delay = 0;
+for (var i = 0; i < notes.length; i++) {
+(function(f, d) {
+setTimeout(function() { playTone(f, 'sine', 0.25, 0.35); }, d);
+})(notes[i], delay);
+delay += 120;
+}
+}
+
+// ── Screen helpers ──
+function showScreen(id) {
+var screens = document.querySelectorAll('.screen');
+for (var i = 0; i < screens.length; i++) {
+screens[i].classList.remove('active');
+}
+document.getElementById(id).classList.add('active');
+var showBar = (id !== 'screenTitle');
+document.getElementById('scoreBar').style.display = showBar ? 'flex' : 'none';
+}
+
+function updateScoreBar() {
+document.getElementById('sbRound').textContent = String(round);
+document.getElementById('sbTarget').textContent = String(round + 1);
+document.getElementById('sbBest').textContent = bestRound > 0 ? String(bestRound) : '-';
+}
+
+// ── Grid builder ──
+function shuffle(arr) {
+for (var i = arr.length - 1; i > 0; i--) {
+var j = Math.floor(Math.random() * (i + 1));
+var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+}
+}
+function buildGrid(containerId, showLit) {
+var container = document.getElementById(containerId);
+container.innerHTML = '';
+for (var i = 0; i < 20; i++) {
+var cell = document.createElement('div');
+cell.className = 'cell';
+if (showLit) {
+cell.textContent = String(allNums[i]);
+if (litIndices.indexOf(i) !== -1) {
+cell.classList.add('lit');
+}
+} else {
+cell.classList.add('hidden');
+}
+container.appendChild(cell);
+}
+}
+
+// ── Game flow ──
+function startGame() {
+initAudio();
+round = 1;
+beginRound();
+}
+
+function beginRound() {
+updateScoreBar();
+
+// Build number set
+allNums = [];
+for (var n = 1; n <= 20; n++) allNums.push(n);
+shuffle(allNums);
+
+// Pick lit indices
+var numLit = round + 1;
+var indices = [];
+for (var k = 0; k < 20; k++) indices.push(k);
+shuffle(indices);
+litIndices = indices.slice(0, numLit);
+
+// Compute sum
+correctSum = 0;
+for (var j = 0; j < litIndices.length; j++) {
+correctSum += allNums[litIndices[j]];
+}
+
+showScreen('screenMemory');
+buildGrid('memGrid', true);
+startCountdown();
+}
+
+function startCountdown() {
+var remaining = 3;
+document.getElementById('cdNum').textContent = String(remaining);
+playTick();
+
+cdTimer = setInterval(function() {
+remaining--;
+if (remaining > 0) {
+document.getElementById('cdNum').textContent = String(remaining);
+playTick();
+} else {
+clearInterval(cdTimer);
+cdTimer = null;
+playEnd();
+setTimeout(showAnswerPhase, 300);
+}
+}, 1000);
+}
+
+function showAnswerPhase() {
+showScreen('screenAnswer');
+buildGrid('ansGrid', false);
+var inp = document.getElementById('numInput');
+inp.value = '';
+// タップでフォーカス（iOS対応）
+setTimeout(function() { inp.focus(); }, 150);
+}
+
+function submitAnswer() {
+var inp = document.getElementById('numInput');
+var val = parseInt(inp.value, 10);
+if (isNaN(val)) { inp.focus(); return; }
+
+isCorrect = (val === correctSum);
+
+if (isCorrect) {
+playCorrect();
+} else {
+playWrong();
+if (round > bestRound) {
+bestRound = round;
+saveBest();
+}
+}
+
+showResultScreen(val, isCorrect);
+}
+
+function showResultScreen(userVal, correct) {
+showScreen('screenResult');
+updateBestDisplay();
+
+var verdict = document.getElementById('verdict');
+verdict.textContent = correct ? 'CORRECT' : 'FAILED';
+verdict.className = 'result-verdict ' + (correct ? 'correct' : 'wrong');
+
+// Build lit numbers list
+var litNums = [];
+for (var i = 0; i < litIndices.length; i++) {
+litNums.push(allNums[litIndices[i]]);
+}
+litNums.sort(function(a,b){ return a-b; });
+
+var info = document.getElementById('resultInfo');
+var html = '';
+html += '<div class="row"><span class="lbl">ANSWER</span><span class="val">' + correctSum + '</span></div>';
+if (!correct) {
+html += '<div class="row"><span class="lbl">YOUR INPUT</span><span class="val red">' + userVal + '</span></div>';
+}
+html += '<div class="row"><span class="lbl">LIT NUMBERS</span></div>';
+html += '<div class="lit-nums">[ ' + litNums.join(' + ') + ' ]</div>';
+info.innerHTML = html;
+
+var reachedEl = document.getElementById('reachedRound');
+if (!correct) {
+reachedEl.innerHTML = 'REACHED ROUND<span>' + round + '</span>';
+if (bestRound > 0) {
+reachedEl.innerHTML += '<span style="font-size:12px;color:rgba(0,255,224,0.4);margin-top:4px;">BEST: ' + bestRound + '</span>';
+}
+} else {
+reachedEl.innerHTML = '';
+}
+
+var btn = document.getElementById('btnNext');
+if (correct) {
+btn.textContent = 'NEXT →';
+btn.className = 'btn green';
+} else {
+btn.textContent = 'RETRY';
+btn.className = 'btn magenta';
+}
+}
+
+function nextAction() {
+if (isCorrect) {
+round++;
+beginRound();
+} else {
+showScreen('screenTitle');
+updateBestDisplay();
+}
+}
+
+// ── Enter key support ──
+document.getElementById('numInput').addEventListener('keydown', function(e) {
+if (e.key === 'Enter') submitAnswer();
+});
+
+// ── Init ──
+loadBest();
 </script>
+
 </body>
 </html>
