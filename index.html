@@ -18,6 +18,23 @@ flex-direction: column;
 align-items: center;
 overflow-x: hidden;
 position: relative;
+font-size: clamp(10px, 2.5vw, 14px);
+}
+/* 小画面スケーリング */
+@media (max-height: 600px) {
+.title-logo { margin: 8px 0 14px; }
+.title-logo h1 { font-size: 18px; }
+.rules-box { padding: 8px; font-size: 11px; line-height: 1.6; }
+.hi-score-display { margin-bottom: 14px; }
+.countdown-num { font-size: 40px; }
+.cell { font-size: 13px; }
+.score-bar { padding: 6px 0 6px; }
+.score-value { font-size: 18px; }
+.result-verdict { font-size: 32px; margin: 6px 0 12px; }
+}
+@media (max-height: 500px) {
+.rules-box { display: none; }
+.hi-score-display { margin-bottom: 10px; }
 }
 
 /* Scanline overlay */
@@ -224,25 +241,28 @@ to { box-shadow: 0 0 20px rgba(255,225,0,0.6), inset 0 0 14px rgba(255,225,0,0.2
 .cell.hidden { color: transparent; border-color: rgba(0,255,224,0.08); }
 
 /* ── Answer Phase ── */
+#screenAnswer {
+justify-content: center;
+gap: 16px;
+}
 .answer-prompt {
 text-align: center;
 font-size: 11px;
 letter-spacing: 2px;
 color: rgba(0,255,224,0.5);
-margin-bottom: 14px;
 }
 .answer-prompt strong { color: #ff00c8; font-size: 14px; }
-.input-wrap { margin-bottom: 10px; }
+.input-wrap { width: 100%; }
 .num-input {
 display: block;
 width: 100%;
-padding: 14px;
+padding: 18px;
 background: rgba(0,255,224,0.06);
 border: 2px solid rgba(0,255,224,0.4);
 border-radius: 4px;
 color: #00ffe0;
 font-family: inherit;
-font-size: 28px;
+font-size: 36px;
 text-align: center;
 letter-spacing: 4px;
 outline: none;
@@ -352,7 +372,6 @@ BEST ROUND<span id="titleBest">—</span>
 
 <div class="screen" id="screenAnswer">
 <div class="phase-label">ANSWER PHASE — ENTER THE SUM</div>
-<div class="grid" id="ansGrid"></div>
 <div class="answer-prompt">光っていた数字の <strong>合計</strong> を入力</div>
 <div class="input-wrap">
 <input class="num-input" id="numInput" type="number" inputmode="numeric"
