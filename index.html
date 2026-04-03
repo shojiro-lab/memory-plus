@@ -243,7 +243,7 @@ to { box-shadow: 0 0 20px rgba(255,225,0,0.6), inset 0 0 14px rgba(255,225,0,0.2
 /* ── Answer Phase ── */
 #screenAnswer {
 justify-content: center;
-gap: 20px;
+gap: 14px;
 }
 .answer-prompt {
 text-align: center;
@@ -252,10 +252,11 @@ letter-spacing: 2px;
 color: rgba(0,255,224,0.5);
 }
 .answer-prompt strong { color: #ff00c8; font-size: 14px; }
-.num-input {
-display: block;
+
+/* 入力表示エリア（inputの代わり） */
+.num-display {
 width: 100%;
-padding: 18px;
+padding: 16px;
 background: rgba(0,255,224,0.06);
 border: 2px solid rgba(0,255,224,0.4);
 border-radius: 4px;
@@ -264,12 +265,64 @@ font-family: inherit;
 font-size: 36px;
 text-align: center;
 letter-spacing: 4px;
-outline: none;
--webkit-appearance: none;
-appearance: none;
-caret-color: #ff00c8;
+min-height: 72px;
+display: flex;
+align-items: center;
+justify-content: center;
+box-shadow: 0 0 14px rgba(0,255,224,0.15);
 }
-.num-input:focus { border-color: #00ffe0; box-shadow: 0 0 14px rgba(0,255,224,0.3); }
+.num-display.has-val { color: #ffe100; text-shadow: 0 0 10px #ffe100; }
+
+/* カスタムキーパッド */
+.keypad {
+display: grid;
+grid-template-columns: repeat(3, 1fr);
+gap: 8px;
+width: 100%;
+}
+.key {
+padding: 16px 0;
+background: rgba(0,255,224,0.05);
+border: 1px solid rgba(0,255,224,0.25);
+border-radius: 4px;
+color: #00ffe0;
+font-family: inherit;
+font-size: 22px;
+font-weight: bold;
+letter-spacing: 1px;
+cursor: pointer;
+text-align: center;
+-webkit-tap-highlight-color: transparent;
+transition: background 0.1s, box-shadow 0.1s;
+user-select: none;
+-webkit-user-select: none;
+}
+.key:active {
+background: rgba(0,255,224,0.18);
+box-shadow: 0 0 12px rgba(0,255,224,0.4);
+}
+.key.key-del {
+color: #ff00c8;
+border-color: rgba(255,0,200,0.3);
+font-size: 16px;
+letter-spacing: 0;
+}
+.key.key-del:active { background: rgba(255,0,200,0.15); }
+.key.key-submit {
+grid-column: span 3;
+background: transparent;
+border: 2px solid #00ffe0;
+color: #00ffe0;
+font-size: 15px;
+letter-spacing: 4px;
+text-shadow: 0 0 10px #00ffe0;
+box-shadow: 0 0 12px rgba(0,255,224,0.2);
+padding: 14px 0;
+}
+.key.key-submit:active {
+background: rgba(0,255,224,0.12);
+box-shadow: 0 0 24px rgba(0,255,224,0.5);
+}
 
 /* ── Result Screen ── */
 .result-verdict {
@@ -372,9 +425,22 @@ BEST ROUND<span id="titleBest">—</span>
 <div class="screen" id="screenAnswer">
 <div class="phase-label">ANSWER PHASE — ENTER THE SUM</div>
 <div class="answer-prompt">光っていた数字の <strong>合計</strong> を入力</div>
-<input class="num-input" id="numInput" type="number" inputmode="numeric"
-pattern="[0-9]*" placeholder="0" autocomplete="off" autocorrect="off">
-<button class="btn" onclick="submitAnswer()">SUBMIT</button>
+<div class="num-display" id="numDisplay">—</div>
+<div class="keypad">
+<div class="key" onclick="keyPress('1')">1</div>
+<div class="key" onclick="keyPress('2')">2</div>
+<div class="key" onclick="keyPress('3')">3</div>
+<div class="key" onclick="keyPress('4')">4</div>
+<div class="key" onclick="keyPress('5')">5</div>
+<div class="key" onclick="keyPress('6')">6</div>
+<div class="key" onclick="keyPress('7')">7</div>
+<div class="key" onclick="keyPress('8')">8</div>
+<div class="key" onclick="keyPress('9')">9</div>
+<div class="key key-del" onclick="keyDel()">⌫ DEL</div>
+<div class="key" onclick="keyPress('0')">0</div>
+<div class="key key-del" onclick="keyClear()">CLR</div>
+<div class="key key-submit" onclick="submitAnswer()">SUBMIT</div>
+</div>
 </div>
 
 <!-- ── Result Screen ── -->
@@ -514,16 +580,38 @@ setTimeout(showAnswerPhase, 300);
 }
 }, 1000);
 }
+var currentInput = '';
+function keyPress(digit) {
+if (currentInput.length >= 4) return;
+currentInput += digit;
+updateDisplay();
+}
+function keyDel() {
+currentInput = currentInput.slice(0, -1);
+updateDisplay();
+}
+function keyClear() {
+currentInput = '';
+updateDisplay();
+}
+function updateDisplay() {
+var el = document.getElementById('numDisplay');
+if (currentInput === '') {
+el.textContent = '—';
+el.classList.remove('has-val');
+} else {
+el.textContent = currentInput;
+el.classList.add('has-val');
+}
+}
 function showAnswerPhase() {
+currentInput = '';
+updateDisplay();
 showScreen('screenAnswer');
-var inp = document.getElementById('numInput');
-inp.value = '';
-setTimeout(function() { inp.focus(); }, 150);
 }
 function submitAnswer() {
-var inp = document.getElementById('numInput');
-var val = parseInt(inp.value, 10);
-if (isNaN(val)) { inp.focus(); return; }
+var val = parseInt(currentInput, 10);
+if (isNaN(val)) return;
 isCorrect = (val === correctSum);
 if (isCorrect) {
 playCorrect();
@@ -564,8 +652,13 @@ if (isCorrect) { round++; beginRound(); }
 else { showScreen('screenTitle'); updateBestDisplay(); }
 }
 
-document.getElementById('numInput').addEventListener('keydown', function(e) {
-if (e.key === 'Enter') submitAnswer();
+document.addEventListener('keydown', function(e) {
+if (document.getElementById('screenAnswer').classList.contains('active')) {
+if (e.key >= '0' && e.key <= '9') keyPress(e.key);
+else if (e.key === 'Backspace') keyDel();
+else if (e.key === 'Enter') submitAnswer();
+else if (e.key === 'Escape') keyClear();
+}
 });
 
 loadBest();
